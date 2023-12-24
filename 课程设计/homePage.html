@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>蜘蛛纸牌</title>
+    <style>
+        body, ol, ul, h1, h2, h3, h4, h5, h6, p, th, td, dl, dd, form, fieldset, legend, input, textarea, select {
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            font: 14px 微软雅黑, 宋体, arial narrow, HELVETICA;
+            margin: auto;
+        }
+
+        .gameView {
+            width: 1220px;
+            height: 700px;
+            margin: 0 auto;
+            position: relative;
+            background-color: #164f38
+        }
+
+        .gameBg {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            opacity: .2
+        }
+    </style>
+</head>
+<body>
+<div class="gameView" id="gameView">
+    <div class="gameBg"></div>
+    <div class="pokerBox" id="pokerBox"></div>
+</div>
+</body>
+<script>
+//创建扑克牌信息
+let pokerData = {
+    style:['a','b','c','d']
+}
+</script>
+</html>
