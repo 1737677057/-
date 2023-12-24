@@ -37,9 +37,49 @@
 </div>
 </body>
 <script>
+    //难度选择
+let Difficult = 1;//扑克难度：[1 简单（单色）] [2 中等（双色）] [3 困难（四色）]
+
 //创建扑克牌信息
 let pokerData = {
-    style:['a','b','c','d']
-}
+    style:['a','b','c','d'],//[a:红桃][b:方片][c:梅花][d:黑桃]
+    num:[1,2,3,4,5,6,7,8,9,10,11,12,13]
+};
+let pokerAllCount = 0;//所有牌数
+let pokerAllPet = [];//存放牌的数组
+let pokerSendCount = 0;//已经发了的牌数
+
+//将牌放入数组中 104张
+    function initAllPoker(){
+        //确保之前的值被清空了
+        let pokerAllCount = 0;
+        let pokerAllPet = [];
+        let pokerSendCount = 0;
+        for (let i =0;i<pokerData.style.length;i++){
+            for (let j =0;i<pokerData.num.length;j++){
+                let poker1 = {};//牌有3个属性pos（放置位置），style（花色，背面，或者占位符），num（牌的点数）
+                poker1.pos = -1;
+                poker1.style = i;
+                poker1.num = j;
+                pokerAllPet.push(poker1);
+                let poker2 = {};//牌有3个属性pos（放置位置），style（花色，背面，或者占位符），num（牌的点数）
+                poker2.pos = -1;
+                poker2.style = i;
+                poker2.num = j;
+                pokerAllPet.push(poker2);
+            }
+        }
+        pokerAllCount = pokerAllPet.length;
+        shuffle(pokerAllPet)
+    }
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            let index = Math.ceil(Math.random()*(i-1));
+            // 将 array[i] 与随机索引处的元素交换
+            let temp = arr[i];
+            arr[i] = arr[index];
+            arr[index] = temp;
+        }
+    }
 </script>
 </html>
