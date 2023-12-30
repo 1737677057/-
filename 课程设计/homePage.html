@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>蜘蛛纸牌</title>
     <script type="text/javascript" src="./lib/jquery-1.8.0.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<!--    <script src="./request.js"></script>-->
     <style>
         body, ol, ul, h1, h2, h3, h4, h5, h6, p, th, td, dl, dd, form, fieldset, legend, input, textarea, select {
             margin: 0;
@@ -98,6 +100,15 @@
 </div>
 </body>
 <script>
+
+    const request = axios.create({
+        baseURL: 'http://localhost:8089',
+        timeout: 5000,
+        withCredentials: true, // 允许跨域请求发送cookie
+        headers: {
+            'Content-Type': 'application/json;charset=utf-8',
+        },
+    });
     //难度选择
     let Difficult = 1;//扑克难度：[1 简单（单色）] [2 中等（双色）] [3 困难（四色）]
 
@@ -109,7 +120,33 @@
     let pokerAllCount = 0;//所有牌数
     let pokerAllPet = [];//存放牌的数组
     let pokerSendNum = 0;//已经发了的牌数
-    let score = 0
+    let score = 500
+    let Tips;//提示
+    let lastCards = []//存放提示牌组
+    // doGet(`/ping/${"lll"}`,).then(res =>{
+    //
+    // })
+    // request.post("/post_ping",{str:"来了",list:["222","333"]}).then(res => {
+    //     console.log(res)
+    // })
+    $.ajax({
+        type: "post",
+        headers: {},
+        url: "http://localhost:8089/post_ping",
+        data: {str:"来了",list:["222","333"]},
+        dataType: "json",
+        success: function (resp) {
+            console.log("resp")
+        },
+        error: function (err) {
+
+        }
+    });
+
+    // doPost("/shuffle",{"type":["A"],"num":["1"]}).then(res => {
+    //     console.log(res)
+    // })
+
 
     //将牌放入数组中 104张
     function initAllPoker() {
@@ -117,33 +154,39 @@
         pokerAllCount = 0;
         pokerAllPet = [];
         pokerSendNum = 0;
-        for (let i = 0; i < pokerData.type.length; i++) {
-            for (let j = 1; j <= pokerData.num.length; j++) {
-                let poker1 = {};//style（花色），num（牌的点数）
-                poker1.type = pokerData.type[i];
-                poker1.num = j;
-                pokerAllPet.push(poker1);
-                let poker2 = {};//，style 花色，num（牌的点数）
-                poker2.type = pokerData.type[i];
-                poker2.num = j;
-                pokerAllPet.push(poker2);
-            }
-        }
-        pokerAllCount = pokerAllPet.length;
-        pokerAllPet = shuffle(pokerAllPet)
+        // for (let i = 0; i < pokerData.type.length; i++) {
+        //     for (let j = 1; j <= pokerData.num.length; j++) {
+        //         let poker1 = {};//style（花色），num（牌的点数）
+        //         poker1.type = pokerData.type[i];
+        //         poker1.num = j;
+        //         pokerAllPet.push(poker1);
+        //         let poker2 = {};//，style 花色，num（牌的点数）
+        //         poker2.type = pokerData.type[i];
+        //         poker2.num = j;
+        //         pokerAllPet.push(poker2);
+        //     }
+        // }
+        // pokerAllCount = pokerAllPet.length;
+        // pokerAllPet = shuffle(pokerAllPet)
+        // doPost('/shuffle', {
+        //     type: this.pokerData.type,
+        //     num: this.pokerData.num,
+        // }).then((data) => {
+        //     pokerAllPet = data
+        // })
     }
 
     //洗牌法
-    function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            let index = Math.ceil(Math.random() * (i - 1));
-            // 将 arr[i] 与随机索引处的元素交换
-            let temp = arr[i];
-            arr[i] = arr[index];
-            arr[index] = temp;
-        }
-        return arr;
-    }
+    // function shuffle(arr) {
+    //     for (let i = arr.length - 1; i > 0; i--) {
+    //         let index = Math.ceil(Math.random() * (i - 1));
+    //         // 将 arr[i] 与随机索引处的元素交换
+    //         let temp = arr[i];
+    //         arr[i] = arr[index];
+    //         arr[index] = temp;
+    //     }
+    //     return arr;
+    // }
 
     let cardPile = document.getElementsByClassName('bottom-left')[0]
     let readyPile = []
@@ -211,9 +254,16 @@
             // pokerCard.mousedown = card_move
             move(pokerCard, pos.left-19, pos.top + top-38, delay)
             column.appendChild(pokerCard.get(0));
+            let images = column.querySelectorAll('img');
+            images = [...images]
+            let index = images.indexOf(pokerCard.get(0))
+            pokerCard.get(0).setAttribute('data-sort', index+1)
+            // console.log(index)
+            // console.log(columnRow)
             delay += 60;
             pokerSend.push(pokerCard)//这是已经发了的牌，便于访问历史记录
         }
+        startTips()
     }
 
     initAllPoker()
@@ -222,6 +272,7 @@
     let columns = document.getElementsByClassName('column');
 
     function continueDealCard() {//将它点击绑定在牌堆上
+        stopTimer()
         let delay = 0
         console.log(columns)
         let tmpLen = pokerSend.length
@@ -246,16 +297,24 @@
                     border: "3px solid white"
                 });
                 let pos = Pos(column)
-                move(pokerCard, pos.left-19, pos.top * 4 + top-38, delay)
                 pokerCard.get(0).addEventListener('mousedown',e=>card_move(e))
+                pokerCard.get(0).style.display='none'
                 column.appendChild(pokerCard.get(0));
                 delay += 60;
                 pokerSend.push(pokerCard)
+                let images = column.querySelectorAll('img');
+                images = [...images]
+                let index = images.indexOf(pokerCard.get(0))
+                pokerCard.get(0).setAttribute('data-sort', index+1)
+                pokerCard.get(0).style.display='block'
+                console.log()
+                move(pokerCard, pos.left-19, pos.top * (pokerCard.get(0).getAttribute("data-sort")-1) + top-10, delay)
             }
         }
         setTimeout(function (e) {
             let _delPoker = readyPile.shift();//发完一组牌后，减少一个牌堆
             _delPoker.remove()
+            startTips()
             // let imageSrc = './img/' + _delPoker.type + '-' + _delPoker.num + '.png';
             // let images = document.querySelectorAll(".cardPile img"); // 选择div中所有的img
             // for (let i = 0; i < images.length; i++) {
@@ -288,7 +347,6 @@
         let dealPos = arr[0].getBoundingClientRect()
         let left = dealPos.left
         let top = dealPos.top
-        console.log(top)
         return {"left": left, "top": top}
     }
 
@@ -338,90 +396,280 @@
     //后期判断花色
     //检查是否可以放置
     function checkCanLay(column, ele) {//这里传入的是e.target
+        // debugger
         let images = column.querySelectorAll('img');
+        if (images.length===0){
+            return true
+        }
         images = [...images]
-        if (pokerAllPet[images[images.length - 1].getAttribute('data-index')] - 1 === ele.getAttribute('data-index').num) {
+        if (pokerAllPet[images[images.length - 1].getAttribute('data-index')].num - 1 === pokerAllPet[ele.getAttribute('data-index')].num) {
             return true
         }
         return false
     }
 
+    // function card_move(e) {
+    //     let ele = e.target
+    //     console.log("mmm")
+    //     let box = $('<div style="z-index: 999;position: absolute"></div>');
+    //     let cardBox = checkCanMove(ele)
+    //     let preColumn = ele.parentElement;
+    //     if (cardBox.canMove) {
+    //         console.log("oo")
+    //         box.mousedown = function () {
+    //             console.log("kkk")
+    //             //将可拖动纸牌复制一份到盒子里
+    //             for (let i = 0; i < cardBox.tempImages.length; i++) {
+    //                 let  s = cardBox.tempImages[i].cloneNode(true)
+    //                 box.get(0).appendChild(s)
+    //             }
+    //             //将原来元素变透明
+    //             let column = ele.parentElement;
+    //             let images = column.querySelectorAll('img');
+    //             images = [...images]
+    //             let index = images.indexOf(ele)
+    //             for (let i = index; i < images.length; i++) {
+    //                 console.log('透明了')
+    //                 images[i].style.opacity = '0.6'
+    //             }
+    //             const rect = box.get(0).getBoundingClientRect();
+    //             // 获取按下鼠标时 盒子与页面的距离
+    //             let originBoxX = rect.left;
+    //             let originBoxY = rect.top;
+    //             // 获取按下鼠标时 鼠标与页面的距离
+    //             let mouseX = ele.pageX;
+    //             let mouseY = ele.pageY;
+    //             // 在页面上移动
+    //             window.onmousemove = function () {
+    //                 // 鼠标滑动的距离 = 鼠标移动后的位置 - 按下鼠标时的位置
+    //                 let distanceX = ele.pageX - mouseX;
+    //                 let distanceY = ele.pageY - mouseY;
+    //             // 给元素重新赋值 上左定位的位置
+    //                 box.get(0).style.left = originBoxX + distanceX + "px";
+    //                 box.get(0).style.top = originBoxY + distanceY + "px";
+    //             }
+    //           // 鼠标松开取消事件
+    //             box.mouseup = function () {
+    //                 let line = Math.floor((box.get(0).left)/115)
+    //                 if (((box.get(0).left)%115)/115>0.5){
+    //                     line=line+1
+    //                     console.log("判断哪一列")
+    //                 }
+    //                 let column = document.getElementById(`column${line}`)
+    //                 if (checkCanLay(column,ele)){
+    //                     console.log("通过检查")
+    //                     // 解绑在页面上滚动的事件
+    //                     window.mousemove = null;
+    //                     //将元素加入新的列,并删除之前的
+    //                     for (let i = index; i < images.length; i++) {
+    //                         column.appendChild(images[i])//将这些加入新的列
+    //                         preColumn.removeChild(images[i])//清除操作在这里
+    //                     }
+    //                     //检测是否翻牌
+    //                     if (index!==images.length-1){
+    //                         let lastCard = images[index-1]
+    //                         if (lastCard.get(0).getAttribute("data-src")!==null){
+    //                             expose(lastCard)
+    //                         }
+    //                     }
+    //                     //检测是否收牌
+    //                     Draw(column)
+    //
+    //                 }else {
+    //                     window.mousemove = null;
+    //                     //恢复透明度
+    //                     for (let i = index; i < images.length; i++) {
+    //                         images[i].style.opacity = '1'
+    //                     }
+    //                     box.innerText=''//清空box
+    //                 }
+    //             }
+    //         }
+    //         box.mousedown()
+    //     }
+    // }
+    //提示功能可以时一个定时器，在一次移动牌结束后添加，或者在发牌后添加，注意的是将它一定在外边，当移动牌和发牌前把上一个清空
+    // 当玩家大约三十秒没有动静时就做出提示，分别是提示移动和提示发牌没有
+
+    //提示函数
+    // 启动定时器的函数,这里可以传入后端
+    function startTips() {
+        Tips = setInterval(() => {
+            lastCards = []
+            //先将每一列的最上方可移动牌放入数组中
+            let flag2 = false
+           for (let i =1;i<=10;i++){
+            let column =document.getElementById(`column${i}`)
+               let images = column.querySelectorAll('img')
+               images = [...images]
+               let j = images.length-1
+               for (;j>0;j--){
+                   if (images[j].getAttribute('data-src')){
+                       lastCards = []
+                       flag2 =true
+                       break
+                   }
+                   if (pokerAllPet[images[j].getAttribute('data-index')].num +1 !== pokerAllPet[images[j - 1].getAttribute('data-index')].num){
+                       break
+                   }
+               }
+               if (flag2){
+                   break
+               }
+               lastCards.push(images[j])
+           }
+           //接下来判断是否有两个是相差一的且花色相同
+            let flag = false
+            for (let i =0;i<lastCards.length;i++){
+                let j = lastCards.length-1
+                for (j =lastCards.length-1;j>i;j--) {
+                    //花色相同
+                    if (lastCards[i] && lastCards[j]) {
+                        if (pokerAllPet[lastCards[i].getAttribute('data-index')].type === pokerAllPet[lastCards[j].getAttribute('data-index')].type) {
+                            if (pokerAllPet[lastCards[i].getAttribute('data-index')].num + 1 === pokerAllPet[lastCards[j].getAttribute('data-index')].num ||
+                                pokerAllPet[lastCards[i].getAttribute('data-index')].num - 1 === pokerAllPet[lastCards[j].getAttribute('data-index')].num) {
+                                lastCards[i].style.animation = 'glowing-border 2s infinite';
+                                lastCards[j].style.animation = 'glowing-border 2s infinite';
+                                lastCards[i].style.border = '3px solid yellow';
+                                lastCards[j].style.border = '3px solid yellow';
+                                lastCards[i].style.shadow = '0 0 15px yellow'
+                                lastCards[j].style.shadow = '0 0 15px yellow'
+                                flag = true
+                                break
+                            }
+                        }
+                    }
+                }
+                if (flag){
+                    break
+                }
+            }
+            //如果不存在则提示发牌
+            if (!flag){
+                readyPile[0].style. animation='glowing-border 2s infinite';
+                readyPile[0].style.border= '3px solid yellow';
+            }
+
+        }, 10000);
+    }
+
+    // 停止定时器的函数
+    function stopTimer() {
+        clearInterval(Tips);
+    }
+
+    // startTips();
+
+
+
     function card_move(e) {
         let ele = e.target
-        console.log("mmm")
-        let box = $('<div style="z-index: 999;position: absolute"></div>');
+        console.log(ele)
+        $("#move").remove()
+        let box = $('<div id="move" style="z-index: 999;position: absolute;width: 101px;height: 140px;"></div>');
+        box.get(0).style.left = ele.style.left
+        box.get(0).style.top = ele.style.top
         let cardBox = checkCanMove(ele)
         let preColumn = ele.parentElement;
         if (cardBox.canMove) {
-            console.log("oo")
             box.mousedown = function () {
-                console.log("kkk")
                 //将可拖动纸牌复制一份到盒子里
                 for (let i = 0; i < cardBox.tempImages.length; i++) {
                     let  s = cardBox.tempImages[i].cloneNode(true)
-                    box.get(0).appendChild(s)
+                    s.style = {}
+                    box.append(s)
                 }
+                let gameView = $(".gameView")
+                gameView.append(box)
                 //将原来元素变透明
                 let column = ele.parentElement;
                 let images = column.querySelectorAll('img');
                 images = [...images]
                 let index = images.indexOf(ele)
                 for (let i = index; i < images.length; i++) {
-                    console.log('透明了')
                     images[i].style.opacity = '0.6'
                 }
                 const rect = box.get(0).getBoundingClientRect();
+                const gameViewRect = gameView.get(0).getBoundingClientRect()
                 // 获取按下鼠标时 盒子与页面的距离
                 let originBoxX = rect.left;
                 let originBoxY = rect.top;
                 // 获取按下鼠标时 鼠标与页面的距离
-                let mouseX = ele.pageX;
-                let mouseY = ele.pageY;
-                // 在页面上移动
-                window.onmousemove = function () {
+                let mouseX = e.pageX;
+                let mouseY = e.pageY;
+                let distanceX = mouseX - originBoxX;
+                let distanceY = mouseY - originBoxY;
+                let moveFun = function (ev) {
                     // 鼠标滑动的距离 = 鼠标移动后的位置 - 按下鼠标时的位置
-                    let distanceX = ele.pageX - mouseX;
-                    let distanceY = ele.pageY - mouseY;
-                // 给元素重新赋值 上左定位的位置
-                    box.get(0).style.left = originBoxX + distanceX + "px";
-                    box.get(0).style.top = originBoxY + distanceY + "px";
+
+                    // // 给元素重新赋值 上左定位的位置
+                    // box.get(0).style.left = originBoxX + distanceX + "px";
+                    // box.get(0).style.top = originBoxY + distanceY + "px";
+                    box.css({"left": ev.pageX-distanceX-gameViewRect.left + "px", "top": ev.pageY - distanceY+ "px"})
+
                 }
-              // 鼠标松开取消事件
-                box.mouseup = function () {
-                    let line = Math.floor((box.get(0).left)/115)
-                    if (((box.get(0).left)%115)/115>0.5){
+                // 在页面上移动
+                $(document).mousemove(moveFun)
+                // 鼠标松开取消事件
+                box.mouseup(function () {
+                    let line = Math.floor(parseInt(box.get(0).style.left)/115)+1
+                    if (((parseFloat(box.get(0).style.left))%115)/115>0.5){
                         line=line+1
-                        console.log("判断哪一列")
                     }
                     let column = document.getElementById(`column${line}`)
                     if (checkCanLay(column,ele)){
+                        stopTimer()
+                        for (let i = index; i < images.length; i++) {
+                            column.appendChild(images[i])//将这些加入新的列,这一步骤不是复制而是直接把之前的放置过去
+                            // preColumn.removeChild(images[i])//清除操作在这里
+                        }
                         console.log("通过检查")
                         // 解绑在页面上滚动的事件
-                        window.mousemove = null;
+                        // $(document).mousemove();
+                        // moveFun = null
+                        $(document).off('mousemove', moveFun)
                         //将元素加入新的列,并删除之前的
                         for (let i = index; i < images.length; i++) {
-                            column.appendChild(images[i])//将这些加入新的列
-                            preColumn.removeChild(images[i])//清除操作在这里
+                            column.appendChild(images[i])//将这些加入新的列,这一步骤不是复制而是直接把之前的放置过去
+                            let afterImage = column.querySelectorAll('img')
+                            afterImage = [...afterImage]
+                            let afterIndex = afterImage.indexOf(images[i])
+                            afterImage[afterImage.length-1].setAttribute('data-sort', afterIndex+1)
+                            console.log("afterIndex"+afterIndex)
+                            afterImage[afterImage.length-1].style.position = 'absolut'
+                            afterImage[afterImage.length-1].style.opacity = '1'
+                            afterImage[afterImage.length-1].style.left = column.style.left
+                            afterImage[afterImage.length-1].style.top = `${column.style.top+afterImage[afterImage.length-1].getAttribute('data-sort')*35-25}px`
+                            // preColumn.removeChild(images[i])//清除操作在这里
                         }
+                        box.text('')//清空box
+                        box.get(0).style.display = 'none'
+
+
                         //检测是否翻牌
-                        if (index!==images.length-1){
+                        if (index!==0){
+                            console.log("进入了翻牌判断")
                             let lastCard = images[index-1]
-                            if (lastCard.get(0).getAttribute("data-src")!==null){
+                            if (lastCard.getAttribute("data-src")!==null){
                                 expose(lastCard)
                             }
                         }
                         //检测是否收牌
                         Draw(column)
-
+                        startTips();
                     }else {
+                        console.log("没通过检查")
                         window.mousemove = null;
                         //恢复透明度
                         for (let i = index; i < images.length; i++) {
                             images[i].style.opacity = '1'
                         }
-                        box.innerText=''//清空box
+                        box.text('')//清空box
+                        score-=1
+                        // moveFun = null
+                        $(document).off('mousemove', moveFun)
                     }
-                }
+                })
             }
             box.mousedown()
         }
@@ -431,7 +679,7 @@
     //可以移动了，把它的牌显示出来，并把data-src去除，可以添加历史记录，方便返回下一步
     //移动成功时要翻牌，收牌时要检测翻牌，移动成功了也要检测收牌
     function expose(ele){
-        ele.get(0).src = ele.getAttribute("data-src")//把它的牌显示出来
+        ele.src = ele.getAttribute("data-src")//把它的牌显示出来
         ele.removeAttribute("data-src")//把data-src去除,可以移动了
         //添加历史记录
     }
@@ -444,7 +692,7 @@
         images = [...images]
         let index = images.indexOf(ele)
         for (let i =index;i<13;i++){
-            if (images[index-i].get(0).getAttribute("data-src")){//如果时背面，直接返回false
+            if (images[index-i].getAttribute("data-src")){//如果时背面，直接返回false
                 return false
             }
                 if (i===12){
@@ -478,6 +726,7 @@
         // if (ele.get(0).getAttribute("data-src")!==null){
         //     return false
         // }
+        console.log("进入翻牌函数")
         let images = column.querySelectorAll('img');
         images = [...images]
         let i = images.length-1
@@ -504,12 +753,38 @@
                     expose(lastCard)
                 }
             }
-            score+=100
+            score+=101
             //此处加入一条历史记录，并判断是否赢了
             //历史记录的本质就是，将每一个事件分区块，看看属于是发牌收牌还是移动牌，然后根据时那个读取一条记录
         }
     }
+    function chooseDifficulty(){
+        gAlert({
+            txt: '请选择游戏难度',
+            txtCenter: true,
+            btn: '简单（单色）',
+            btnCall: function(){
+                Difficult = 1;
+                pokerData.type = [ 'c', 'c', 'c', 'c' ];
+                // initGame();//初始化函数
+            },
+            btn2: '中等（双色）',
+            btn2Call: function(){
+                Difficult = 2;
+                pokerData.type = [ 'c', 'd', 'c', 'd' ];
+                // initGame();
+            },
+            btn3: '困难（四色）',
+            btn3Call: function(){
+                Difficult = 3;
+                pokerData.type = [ 'a', 'b', 'c', 'd' ];
+                // initGame();
+            },
+        });
+    }
 
+//放置只需要数字一样，但是移动需要看是否花色相同,但如果放置列为空，那都可以放
+    //给每一列增加一个自定义属性，index 表明他是这一列第几个牌，然后分别在发牌时候更新，移动牌时候更新
 
 </script>
 </html>
